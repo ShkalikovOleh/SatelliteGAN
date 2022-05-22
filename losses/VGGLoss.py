@@ -19,8 +19,8 @@ class VGGLoss(nn.Module):
 
     def forward(self, real, fake):
         loss = 0.
-        x = self.norm(fake)
-        y = self.norm(real)
+        x = fake
+        y = real
 
         for i, (f, w) in enumerate(zip(self.features, self.weight)):
             x = f(x)
