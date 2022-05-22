@@ -4,9 +4,9 @@ from glob import glob
 import numpy as np
 from osgeo import gdal
 import torch
-import torch.nn. functional as F
+import torch.nn.functional as F
 from torch.utils.data import Dataset
-from torchvision.transforms import ToTensor, Normalize, Compose
+from torchvision.transforms import ToTensor, Normalize, Compose, ConvertImageDtype
 
 
 class CropsDataset(Dataset):
@@ -23,6 +23,7 @@ class CropsDataset(Dataset):
 
         self.norm = Compose([
             ToTensor(),
+            ConvertImageDtype(torch.float32),
             Normalize((0.5, 0.5, 0.5, 0.5),
                       (0.5, 0.5, 0.5, 0.5))
         ])
@@ -36,11 +37,12 @@ class CropsDataset(Dataset):
 
         image = np.empty((h, w, 4))
         for i in range(1, 5):
-            image[..., i-1] = tiff.GetRasterBand(i).ReadAsArray()
+            image[..., i - 1] = tiff.GetRasterBand(i).ReadAsArray()
         image = self.norm(image)
 
         classes = torch.from_numpy(
             tiff.GetRasterBand(5).ReadAsArray()).to(torch.long)
-        mask = F.one_hot(classes)
+        mask = F.one_hot(classes,
+                         num_classes=20).permute(2, 0, 1).to(torch.float)
 
-        return image, mask, self.files[idx]
+        return image, mask
