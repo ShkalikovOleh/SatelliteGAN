@@ -4,26 +4,35 @@ from torch.optim import Adam
 from pytorch_lightning import LightningModule
 
 from .pix2pix_generator import Pix2PixGenerator
-from .discriminator import MultiscalDiscriminator
+from .discriminator import MultiscalDiscriminator, PatchGAN
 
 from losses import *
 
 
 class Pix2Pix(LightningModule):
 
-    def __init__(self, in_channels, out_channels, lr_gen=2*10**-4, lr_disc=2.10**-4,
-                 lambda_fm=10, lambda_l1=100):
+    def __init__(self, in_channels, out_channels, lr_gen=2*10**-4, lr_disc=2*10**-4,
+                 lambda_fm=10, lambda_l1=100, en_vgg_loss=True, en_fm_loss=True, n_disc=3):
         super().__init__()
+
+        if n_disc == 1:
+            assert not en_fm_loss
 
         self.save_hyperparameters()
 
         self.gen = Pix2PixGenerator(in_channels, out_channels)
-        self.disc = MultiscalDiscriminator(in_channels + out_channels)
+        disc_ch = in_channels + out_channels
+        if n_disc > 1:
+            self.disc = MultiscalDiscriminator(disc_ch, n_disc)
+        else:
+            self.disc = PatchGAN(disc_ch)
 
         self.gan_criterion = VanillaLoss()
-        self.fm_criterion = FMLoss()
-        self.vgg_criterion = VGGLoss()
         self.l1_criterion = nn.L1Loss()
+        if en_fm_loss:
+            self.fm_criterion = FMLoss()
+        if en_vgg_loss:
+            self.vgg_criterion = VGGLoss()
 
     def forward(self, mask):
         return self.gen(mask)
@@ -34,7 +43,8 @@ class Pix2Pix(LightningModule):
 
         if optimizer_idx == 0:  # disc training
             real_disc_out = self.disc(torch.cat([masks, images], dim=1))
-            fake_disc_out = self.disc(torch.cat([masks, fakes.detach()], dim=1))
+            fake_disc_out = self.disc(
+                torch.cat([masks, fakes.detach()], dim=1))
             loss = self._calc_disc_loss(real_disc_out, fake_disc_out)
 
         elif optimizer_idx == 1:  # gen training
@@ -54,13 +64,22 @@ class Pix2Pix(LightningModule):
     def _calc_gen_loss(self, disc_out, real_images, fake_images):
         gan_loss = self.gan_criterion(disc_out, True, for_disc=False)
         l1_loss = self.l1_criterion(fake_images, real_images)
-        vgg_loss = self.vgg_criterion(real_images[:, :3], fake_images[:, :3])
-        fm_loss = self.fm_criterion(real_images, fake_images)
+
+        if self.hparams.en_vgg_loss:
+            vgg_loss = self.vgg_criterion(
+                real_images[:, :3], fake_images[:, :3])
+            self.log(f'loss/gen_VGG', vgg_loss, on_step=False, on_epoch=True)
+        else:
+            vgg_loss = 0.
+
+        if self.hparams.en_fm_loss:
+            fm_loss = self.fm_criterion(real_images, fake_images)
+            self.log(f'loss/gen_FM', fm_loss, on_step=False, on_epoch=True)
+        else:
+            fm_loss = 0.
 
         self.log(f'loss/gen_GAN', gan_loss, on_step=False, on_epoch=True)
         self.log(f'loss/gen_L1', l1_loss, on_step=False, on_epoch=True)
-        self.log(f'loss/gen_FM', fm_loss, on_step=False, on_epoch=True)
-        self.log(f'loss/gen_VGG', vgg_loss, on_step=False, on_epoch=True)
 
         return gan_loss + self.hparams.lambda_l1 * l1_loss + self.hparams.lambda_fm * (fm_loss + vgg_loss)
 
