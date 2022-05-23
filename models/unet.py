@@ -11,9 +11,9 @@ class UNet(LightningModule):
 
         self.save_hyperparameters()
 
-        self.model = smp.Unet(encoder_name="resnet34",
-                              in_channels=4,
-                              classes=20)
+        self.model = smp.Unet(encoder_name=encoder,
+                              in_channels=in_channels,
+                              classes=n_classes)
 
         self.dice_loss = smp.losses.DiceLoss(
             mode="multiclass", from_logits=True)
