@@ -10,22 +10,28 @@ class VGGLoss(nn.Module):
         super().__init__()
         assert len(weights) == len(out_features_idxs)
 
-        self.features = vgg19(pretrained=True).features.eval()
-        for param in self.features.parameters():
+        features = vgg19(pretrained=True).features.eval()
+        for param in features.parameters():
             param.requires_grad = False
 
+        blocks = []
+        start = 0
+        for end in out_features_idxs:
+            blocks.append(nn.Sequential(*features[start:end + 1]))
+            start = end + 1
+
+        self.blocks = nn.ModuleList(blocks)
+
         self.weight = weights
-        self.out_idxs = out_features_idxs
 
     def forward(self, real, fake):
         loss = 0.
         x = fake
         y = real
 
-        for i, (f, w) in enumerate(zip(self.features, self.weight)):
+        for f, w in zip(self.blocks, self.weight):
             x = f(x)
             y = f(y)
-            if i in self.out_idxs:
-                loss += w * F.l1_loss(x, y.detach())
+            loss += w * F.l1_loss(x, y.detach())
 
         return loss
