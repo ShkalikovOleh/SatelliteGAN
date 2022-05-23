@@ -4,7 +4,7 @@ from torch.optim import Adam
 from pytorch_lightning import LightningModule
 
 from .pix2pix_generator import Pix2PixGenerator
-from .discriminator import MultiscalDiscriminator, PatchGAN
+from .discriminator import MultiscaleDiscriminator, PatchGAN
 
 from losses import *
 
@@ -23,7 +23,7 @@ class Pix2Pix(LightningModule):
         self.gen = Pix2PixGenerator(in_channels, out_channels)
         disc_ch = in_channels + out_channels
         if n_disc > 1:
-            self.disc = MultiscalDiscriminator(disc_ch, n_disc)
+            self.disc = MultiscaleDiscriminator(disc_ch, n_disc)
         else:
             self.disc = PatchGAN(disc_ch)
 

@@ -51,7 +51,7 @@ class PatchGAN(nn.Module):
             return outs[-1]
 
 
-class MultiscalDiscriminator(nn.Module):
+class MultiscaleDiscriminator(nn.Module):
 
     def __init__(self, in_channels, n_disc=3, ret_feat=True):
         super().__init__()
