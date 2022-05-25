@@ -6,11 +6,11 @@ def calculate_counts_per_class(loader):
     Return number of pixels and number of images per class
     '''
 
-    images, _ = next(iter(loader))
-    n_channels = images.shape[1]
+    _, masks = next(iter(loader))
+    n_classes = masks.shape[1]
 
-    pixels_counts = torch.zeros(n_channels, dtype=torch.long)
-    images_counts = torch.zeros(n_channels, dtype=torch.long)
+    pixels_counts = torch.zeros(n_classes, dtype=torch.long)
+    images_counts = torch.zeros(n_classes, dtype=torch.long)
 
     for _, masks in loader:
         bs, ch, h, w = masks.shape
