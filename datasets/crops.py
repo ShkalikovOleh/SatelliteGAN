@@ -11,7 +11,7 @@ from torchvision.transforms import ToTensor, Normalize, Compose, ConvertImageDty
 
 class CropsDataset(Dataset):
 
-    def __init__(self, root_dir, exclude_names=None):
+    def __init__(self, root_dir, exclude_names=None, apply_minmax=True):
         super().__init__()
 
         self.files = glob(os.path.join(root_dir, '*.tif'))
@@ -28,6 +28,8 @@ class CropsDataset(Dataset):
                       (0.5, 0.5, 0.5, 0.5))
         ])
 
+        self.min_max = apply_minmax
+
     def __len__(self):
         return len(self.files)
 
@@ -38,11 +40,15 @@ class CropsDataset(Dataset):
         image = np.empty((h, w, 4))
         for i in range(1, 5):
             image[..., i - 1] = tiff.GetRasterBand(i).ReadAsArray()
-        image = self.norm(image)
+
+        if self.min_max:
+            image = image / np.amax(image, axis=(0, 1))
+        image = self.norm()
 
         classes = torch.from_numpy(
             tiff.GetRasterBand(5).ReadAsArray()).to(torch.long)
-        mask = F.one_hot(classes,
-                         num_classes=20).permute(2, 0, 1).to(torch.float)
+
+        mask = F.one_hot(classes - 1,
+                         num_classes=19).permute(2, 0, 1).to(torch.float)
 
         return image, mask
