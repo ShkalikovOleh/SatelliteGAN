@@ -43,7 +43,7 @@ class CropsDataset(Dataset):
 
         if self.min_max:
             image = image / np.amax(image, axis=(0, 1))
-        image = self.norm()
+        image = self.norm(image)
 
         classes = torch.from_numpy(
             tiff.GetRasterBand(5).ReadAsArray()).to(torch.long)
