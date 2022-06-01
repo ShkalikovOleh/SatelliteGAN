@@ -21,14 +21,16 @@ class CropsDataset(Dataset):
                 path = os.path.join(root_dir, name)
                 self.files.remove(path)
 
+        self.min_max = apply_minmax
+        # assume that max value is 2 if don't apply min max
+        param = 0.5 if apply_minmax else 1
+        params = [param for _ in range(4)]
+
         self.norm = Compose([
             ToTensor(),
             ConvertImageDtype(torch.float32),
-            Normalize((0.5, 0.5, 0.5, 0.5),
-                      (0.5, 0.5, 0.5, 0.5))
+            Normalize(params, params)
         ])
-
-        self.min_max = apply_minmax
 
     def __len__(self):
         return len(self.files)
