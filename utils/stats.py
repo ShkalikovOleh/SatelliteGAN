@@ -1,7 +1,7 @@
 import torch
 
 
-def calculate_counts_per_class(loader):
+def counts_per_classes(loader):
     '''
     Return number of pixels and number of images per class
     '''
@@ -22,7 +22,7 @@ def calculate_counts_per_class(loader):
     return pixels_counts, images_counts
 
 
-def get_mean_std_per_classes(loader):
+def mean_std_per_classes(loader):
     images, masks = next(iter(loader))
     n_classes = masks.shape[1]
     n_channels = images.shape[1]
@@ -43,3 +43,18 @@ def get_mean_std_per_classes(loader):
     std = torch.sqrt((sq_s - n * mean**2) / (n - 1))
 
     return mean, std
+
+
+def hist_per_channels(loader, bins=10, min=-1, max=1):
+    images, _ = next(iter(loader))
+    n_channels = images.shape[1]
+
+    result = torch.zeros(n_channels, bins, dtype=torch.long)
+
+    for images, _ in loader:
+        for i in range(n_channels):
+            data = images[:, i].flatten()
+            result[i] += torch.histc(data, bins=bins,
+                                     min=min, max=max).to(torch.long)
+
+    return result
