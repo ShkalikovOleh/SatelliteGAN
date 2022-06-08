@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.optim import Adam
+from torchvision.utils import make_grid
 from pytorch_lightning import LightningModule
 
 from .pix2pix_generator import Pix2PixGenerator
@@ -15,17 +16,13 @@ class Pix2Pix(LightningModule):
                  lambda_fm=10, lambda_l1=100, en_vgg_loss=True, en_fm_loss=True, n_disc=3):
         super().__init__()
 
-        if n_disc == 1:
-            assert not en_fm_loss
-
         self.save_hyperparameters()
 
         self.gen = Pix2PixGenerator(in_channels, out_channels)
         disc_ch = in_channels + out_channels
-        if n_disc > 1:
-            self.disc = MultiscaleDiscriminator(disc_ch, n_disc)
-        else:
-            self.disc = PatchGAN(disc_ch)
+
+        self.disc = MultiscaleDiscriminator(disc_ch, n_disc,
+                                            ret_feat=en_fm_loss)
 
         self.gan_criterion = VanillaLoss()
         self.l1_criterion = nn.L1Loss()
@@ -57,7 +54,8 @@ class Pix2Pix(LightningModule):
         loss = self.gan_criterion(real_disc_out, True, for_disc=True) * 0.5
         loss += self.gan_criterion(fake_disc_out, False, for_disc=True) * 0.5
 
-        self.log(f'loss/disc_GAN', loss, on_step=False, on_epoch=True)
+        self.log(f'loss/disc', loss, on_step=False,
+                 on_epoch=True, prog_bar=True)
 
         return loss
 
@@ -68,20 +66,26 @@ class Pix2Pix(LightningModule):
         if self.hparams.en_vgg_loss:
             vgg_loss = self.vgg_criterion(
                 real_images[:, :3], fake_images[:, :3])
-            self.log(f'loss/gen_VGG', vgg_loss, on_step=False, on_epoch=True)
+            self.log('loss/gen_VGG', vgg_loss, on_step=False, on_epoch=True)
         else:
             vgg_loss = 0.
 
         if self.hparams.en_fm_loss:
             fm_loss = self.fm_criterion(real_images, fake_images)
-            self.log(f'loss/gen_FM', fm_loss, on_step=False, on_epoch=True)
+            self.log('loss/gen_FM', fm_loss, on_step=False, on_epoch=True)
         else:
             fm_loss = 0.
 
-        self.log(f'loss/gen_GAN', gan_loss, on_step=False, on_epoch=True)
-        self.log(f'loss/gen_L1', l1_loss, on_step=False, on_epoch=True)
+        self.log('loss/gen_GAN', gan_loss, on_step=False, on_epoch=True)
+        self.log('loss/gen_L1', l1_loss, on_step=False, on_epoch=True)
 
-        return gan_loss + self.hparams.lambda_l1 * l1_loss + self.hparams.lambda_fm * (fm_loss + vgg_loss)
+        total_loss = gan_loss + self.hparams.lambda_l1 * \
+            l1_loss + self.hparams.lambda_fm * (fm_loss + vgg_loss)
+
+        self.log('loss/gen', total_loss, on_step=False,
+                 on_epoch=True, prog_bar=True)
+
+        return total_loss
 
     def configure_optimizers(self):
         gen_opt = Adam(self.gen.parameters(),
@@ -90,3 +94,13 @@ class Pix2Pix(LightningModule):
                         self.hparams.lr_disc, betas=(0.5, 0.999))
 
         return disc_opt, gen_opt
+
+    def validation_step(self, batch, batch_idx):
+        images, masks = batch
+
+        fakes = self.gen(masks)
+        images = make_grid((images[:, 0:3] + 1) / 2)
+        fakes = make_grid((fakes[:, 0:3] + 1) / 2)
+
+        self.logger.experiment.add_image('gen', fakes, self.current_epoch)
+        self.logger.experiment.add_image('real', images, self.current_epoch)

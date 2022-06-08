@@ -56,8 +56,6 @@ class MultiscaleDiscriminator(nn.Module):
     def __init__(self, in_channels, n_disc=3, ret_feat=True):
         super().__init__()
 
-        assert n_disc > 1
-
         self.discs = nn.ModuleList(
             [PatchGAN(in_channels, ret_feat=ret_feat) for _ in range(n_disc)]
         )
