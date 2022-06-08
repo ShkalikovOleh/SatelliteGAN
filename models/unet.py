@@ -1,13 +1,17 @@
+
 from torch.optim import Adam
 from pytorch_lightning import LightningModule
 import segmentation_models_pytorch as smp
-from torchmetrics.classification import ConfusionMatrix, CohenKappa, JaccardIndex, Accuracy
 from torchmetrics import MetricCollection
+from torchmetrics.classification import ConfusionMatrix, CohenKappa, JaccardIndex, Accuracy
+
+from losses import FocalLoss
 
 
 class UNet(LightningModule):
 
-    def __init__(self, in_channels, n_classes, encoder='resnet34', lr=2*10**-4, gamma=2):
+    def __init__(self, in_channels, n_classes, encoder='resnet34',
+                 lr=2*10**-4, gamma=2, loss_weights=None):
         super().__init__()
 
         self.save_hyperparameters()
@@ -16,7 +20,7 @@ class UNet(LightningModule):
                               in_channels=in_channels,
                               classes=n_classes)
 
-        self.loss = smp.losses.FocalLoss(mode='multiclass', gamma=gamma)
+        self.loss = FocalLoss(gamma, loss_weights)
 
         metrics = MetricCollection([Accuracy(num_classes=n_classes),
                                     JaccardIndex(n_classes),
