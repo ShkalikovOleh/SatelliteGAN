@@ -38,8 +38,8 @@ class Pix2PixGenerator(nn.Module):
 
     def _make_down_block(self, in_channels, out_channels, norm=True):
         blocks = [nn.Conv2d(in_channels, out_channels,
-                            kernel_size=4,
-                            stride=2, padding=1)]
+                            kernel_size=4, stride=2,
+                            padding=1, bias=False)]
 
         if norm:
             blocks.append(nn.BatchNorm2d(out_channels))
@@ -50,8 +50,8 @@ class Pix2PixGenerator(nn.Module):
 
     def _make_up_block(self, in_channels, out_channels, norm=True, dropout=False):
         blocks = [nn.ConvTranspose2d(in_channels, out_channels,
-                                     kernel_size=4,
-                                     stride=2, padding=1)]
+                                     kernel_size=4, stride=2,
+                                     padding=1, bias=False)]
 
         if norm:
             blocks.append(nn.BatchNorm2d(out_channels))

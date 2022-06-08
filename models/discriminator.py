@@ -29,8 +29,8 @@ class PatchGAN(nn.Module):
 
     def _make_conv_block(self, in_channels, out_channels, norm=True, stride=2):
         blocks = [nn.Conv2d(in_channels, out_channels,
-                            kernel_size=4,
-                            stride=stride, padding=1)]
+                            kernel_size=4, stride=stride,
+                            padding=1, bias=False)]
 
         if norm:
             blocks.append(nn.BatchNorm2d(out_channels))
