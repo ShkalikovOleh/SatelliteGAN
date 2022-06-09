@@ -7,7 +7,7 @@ class FocalLoss(nn.Module):
     def __init__(self, gamma, weights=None):
         super().__init__()
 
-        self.weights = weights
+        self.register_buffer('weights', weights)
         self.gamma = gamma
 
     def __call__(self, pred, target):
