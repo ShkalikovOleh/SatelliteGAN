@@ -1,7 +1,8 @@
+import torch.nn as nn
 import torch.nn.functional as F
 
 
-class FocalLoss:
+class FocalLoss(nn.Module):
 
     def __init__(self, gamma, weights=None):
         self.weights = weights
