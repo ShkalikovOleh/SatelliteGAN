@@ -5,6 +5,8 @@ import torch.nn.functional as F
 class FocalLoss(nn.Module):
 
     def __init__(self, gamma, weights=None):
+        super().__init__()
+
         self.weights = weights
         self.gamma = gamma
 
