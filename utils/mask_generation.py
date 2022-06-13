@@ -48,7 +48,7 @@ def adjust_counts(dataset, current_ppc, dest_ppc, use_mask_func,
             if current_ppc[new_idx] + cond.sum() < dest_ppc[new_idx]:
                 queue.append(new_idx)
 
-        mask = F.one_hot(mask_idx, num_classes=19).permute(2, 0, 1)
+        mask = F.one_hot(mask_idx, num_classes=19).permute(2, 0, 1).float()
         use_mask_func(mask)
         current_ppc += mask.sum(dim=(1, 2)).long()
 
