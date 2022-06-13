@@ -12,12 +12,12 @@ class Augmentor:
 
         self.N = 0
 
-    def __call__(self, src_idx, dest_idx, mask):
+    def __call__(self, mask):
         mask = mask.to(self.device).unsqueeze(dim=0)
 
         fake = self.model(mask)
         aug = torch.cat([fake, mask], dim=1)[0]
 
         self.N += 1
-        path = f'{self.dir}/{self.N}_{src_idx}_{dest_idx}.tif'
+        path = f'{self.dir}/{self.model.__class__.__name__}_{self.N}.tif'
         save_to_tiff(aug, path)
